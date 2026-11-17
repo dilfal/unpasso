@@ -1,6 +1,6 @@
 /* Un passo: service worker. Network-first con fallback sulla cache, più le Web Push dei promemoria.
    Ad ogni rilascio alza la versione di CACHE. */
-const CACHE = 'un-passo-v11';
+const CACHE = 'un-passo-v12';
 const PRECACHE = [
   '/',
   '/index.html',
@@ -8,6 +8,7 @@ const PRECACHE = [
   '/core.js',
   '/oggi.js',
   '/inizia.js',
+  '/disco.js',
   '/timer.js',
   '/aiuto.js',
   '/altro.js',

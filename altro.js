@@ -10,7 +10,7 @@ const DAY = 86400000;
 /* ---------- utilità ---------- */
 function arr(k){ if(!Array.isArray(P.S[k])) P.S[k] = []; return P.S[k]; }
 function sets(){
-  const d = {span:25, pause:5, meds:false, medsPerWeek:7, sound:true, theme:'auto'};
+  const d = {span:25, pause:5, meds:false, medsPerWeek:7, sound:true, theme:'auto', timerStyle:'tide'};
   if(!P.S.settings || typeof P.S.settings !== 'object') P.S.settings = {};
   Object.keys(d).forEach(k => { if(P.S.settings[k] === undefined) P.S.settings[k] = d[k]; });
   return P.S.settings;
@@ -559,6 +559,8 @@ P.screens['altro/impostazioni'] = {
     h += '<div><h3>Pausa</h3><p class="muted small">Durata della pausa tra un blocco e l’altro.</p>' + stepper('alt_pause', s.pause, 'min') + '</div>';
     h += '<div><h3>Suono</h3><p class="muted small">Un suono leggero quando finisce un blocco.</p>' + seg('alt_sound', [['1', 'Sì'], ['0', 'No']], s.sound ? '1' : '0') + '</div>';
     h += '<div><h3>Tema</h3>' + seg('alt_theme', [['auto', 'Automatico'], ['light', 'Chiaro'], ['dark', 'Scuro']], s.theme) + '</div>';
+    h += '<div><h3>Stile del timer</h3><p class="muted small">Come si vede il tempo che passa durante un blocco: la marea che scende oppure un quadrante a disco che si restringe, e che puoi girare col dito per cambiare il tempo rimanente.</p>' +
+      seg('alt_tstyle', [['tide', 'Marea'], ['disc', 'Disco']], s.timerStyle === 'disc' ? 'disc' : 'tide') + '</div>';
     h += '<div><h3>Farmaco</h3><p class="muted small">Se lo attivi, il check-in settimanale chiede anche le dosi previste e quelle saltate.</p>' +
       seg('alt_meds', [['1', 'Sì'], ['0', 'No']], s.meds ? '1' : '0');
     if(s.meds) h += '<p class="muted small" style="margin:12px 0 4px">Dosi a settimana</p>' + stepper('alt_mpw', s.medsPerWeek, '');
@@ -648,6 +650,7 @@ P.actions.alt_pause = el => { const s = sets(); s.pause = clamp((+s.pause || 5) 
 P.actions.alt_mpw = el => { const s = sets(); s.medsPerWeek = clamp((+s.medsPerWeek || 7) + stepVal(el), 1, 28); P.save(); P.render(); };
 P.actions.alt_sound = el => { sets().sound = el.dataset.v === '1'; P.save(); P.render(); };
 P.actions.alt_meds = el => { sets().meds = el.dataset.v === '1'; P.save(); P.render(); };
+P.actions.alt_tstyle = el => { sets().timerStyle = el.dataset.v === 'disc' ? 'disc' : 'tide'; P.save(); P.render(); };
 P.actions.alt_theme = el => { const s = sets(); s.theme = el.dataset.v; applyTheme(s.theme); P.save(); P.render(); };
 P.actions.alt_measure = () => { P.startSession({kind: 'measure', skipReady: true}); };
 try { applyTheme(sets().theme); } catch(e) { /* nessun problema: resta il tema automatico */ }
@@ -836,7 +839,7 @@ P.inputs.alt_file = el => {
 };
 function defaults(){
   return {v: 1, tasks: [], parked: [], wins: [], thoughts: [], checkins: [], slips: [], samples: [],
-    settings: {span: 25, pause: 5, meds: false, medsPerWeek: 7, sound: true, theme: 'auto'}, session: null, lastReview: null};
+    settings: {span: 25, pause: 5, meds: false, medsPerWeek: 7, sound: true, theme: 'auto', timerStyle: 'tide'}, session: null, lastReview: null};
 }
 function replaceState(data){
   Object.keys(P.S).forEach(k => { delete P.S[k]; });

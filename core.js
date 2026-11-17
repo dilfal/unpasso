@@ -7,7 +7,7 @@
 
   const DEF = () => ({
     v: 1, tasks: [], parked: [], wins: [], thoughts: [], checkins: [], slips: [], samples: [],
-    settings: { span: 25, pause: 5, meds: false, medsPerWeek: 7, sound: true, theme: 'auto' },
+    settings: { span: 25, pause: 5, meds: false, medsPerWeek: 7, sound: true, theme: 'auto', timerStyle: 'tide' },
     session: null, lastReview: null
   });
 

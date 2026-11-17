@@ -14,8 +14,8 @@
   const DURS = [5, 10, 15, 25, 40, 60];
   const MIN = 60000;
 
-  let root = null, tide = null, layer = null;
-  let ui = { step: null, parkOpen: false, draft: '', confirmExit: false, spanSet: false, parkMsg: '' };
+  let root = null, tide = null, layer = null, dial = null, disc = null;
+  let ui = { step: null, parkOpen: false, draft: '', confirmExit: false, spanSet: false, parkMsg: '', drag: null };
   let tickId = null, wl = null;
 
   /* ---------- utilità ---------- */
@@ -30,9 +30,12 @@
     root.setAttribute('aria-label', 'Timer');
     tide = document.createElement('div');
     tide.id = 'tide';
+    dial = document.createElement('div');
+    dial.id = 'dial';
     layer = document.createElement('div');
     layer.className = 'layer';
     root.appendChild(tide);
+    root.appendChild(dial);
     root.appendChild(layer);
     document.body.appendChild(root);
 
@@ -85,6 +88,72 @@
     const v = 'scaleY(' + f.toFixed(4) + ')';
     if (tide.style.transform !== v) tide.style.transform = v;
   }
+  /* ---------- stile «Disco» (settings.timerStyle: 'tide' = marea, 'disc' = disco) ---------- */
+  function discOn(s) {
+    return !!(s && (S.settings || {}).timerStyle === 'disc' && P.disco && s.state === 'running' && s.kind !== 'measure' && s.endTs);
+  }
+  function scaleOf(s) {
+    if (!P.disco) return 5;
+    if (P.disco.SCALES.indexOf(s.scale) < 0) s.scale = P.disco.scaleFor(s.minutes > 0 ? s.minutes : 25);
+    return s.scale;
+  }
+  function setDisc(s, remMin) {
+    if (!dial || !P.disco) return;
+    if (!disc) disc = P.disco.create(dial, { active: discActive, drag: discDrag, end: discEnd, key: discKey });
+    disc.set(scaleOf(s), remMin);
+  }
+  function discActive() { return discOn(sess()); }
+  function discDrag(m) {
+    const s = sess();
+    if (!discOn(s)) return;
+    ui.drag = m;
+    setText('[data-n="clock"]', m + ' min');
+    setText('[data-n="info"]', 'Finisce alle ' + P.fmtTime(Date.now() + m * MIN));
+    setDisc(s, m);
+  }
+  // la scala sale soltanto (mai scende): se il rimanente la supera, passa alla scala più piccola che lo contiene
+  function bumpScale(s) {
+    if (!P.disco) return;
+    const m = Math.ceil((s.endTs - Date.now()) / MIN - 1e-9);
+    s.scale = Math.max(scaleOf(s), P.disco.scaleFor(m));
+  }
+  // rilascio: m = nuovi minuti rimanenti (null = annullato). Sposto la fine della fase come tm_plus
+  // (s.endTs + P.save): avvisi.js se ne accorge (firma del timer cambiata) e rifà il piano.
+  function discEnd(m) {
+    const s = sess();
+    ui.drag = null;
+    if (m != null && discOn(s)) {
+      s.endTs = Date.now() + m * MIN;   // la scala non cambia con il trascinamento
+      P.save();
+    }
+    tick();
+  }
+  function discKey(d) {
+    const s = sess();
+    if (!discOn(s)) return;
+    const rem = s.endTs - Date.now();
+    if (d < 0 && rem <= MIN) return;   // freccia giù non aumenta mai il rimanente
+    let n = rem + d * MIN;
+    n = Math.max(MIN, Math.min(Math.max(120 * MIN, rem), n));   // fino a 120 minuti; la scala sale se serve
+    if (Math.abs(n - rem) < 1) return;
+    s.endTs = Date.now() + n;
+    bumpScale(s);
+    saveKeyLater();
+    tick();
+  }
+  // le frecce spostano subito s.endTs, ma il salvataggio (e il piano degli avvisi) parte dopo 300 ms dall'ultima pressione
+  let keySave = null;
+  function saveKeyLater() {
+    if (keySave) clearTimeout(keySave);
+    keySave = setTimeout(flushKeySave, 300);
+  }
+  function flushKeySave() {
+    if (!keySave) return;
+    clearTimeout(keySave);
+    keySave = null;
+    P.save();
+  }
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') flushKeySave(); });
   function sess() { return S.session || null; }
   function taskOf(s) { return s && s.taskId ? S.tasks.find(function (t) { return t.id === s.taskId; }) || null : null; }
   function parkedOf(s) {
@@ -146,9 +215,11 @@
     }
     const rem = s.endTs - now;
     if (rem <= 0) { finish(true, now); return; }
+    if (ui.drag != null) return;   // sto girando il disco: il testo mostra i minuti scelti
     setText('[data-n="clock"]', fmtClock(rem, false));
     setText('[data-n="info"]', 'Finisce alle ' + P.fmtTime(s.endTs));
     setTide(rem / Math.max(1, s.endTs - s.startTs));
+    if (root.classList.contains('disc')) setDisc(s, rem / MIN);
   }
 
   /* ---------- ciclo di vita ---------- */
@@ -160,12 +231,13 @@
     if (s && s.state === 'running') { startTick(); lock(); }
   }
   function close() {
+    flushKeySave();
     stopTick();
     unlock();
     S.session = null;
-    ui = { step: null, parkOpen: false, draft: '', confirmExit: false, spanSet: false, parkMsg: '' };
+    ui = { step: null, parkOpen: false, draft: '', confirmExit: false, spanSet: false, parkMsg: '', drag: null };
     P.save();
-    if (root) { root.hidden = true; root.classList.remove('flash', 'break'); }
+    if (root) { root.hidden = true; root.classList.remove('flash', 'break', 'disc'); }
     P.render();
   }
   function begin(s) {
@@ -173,6 +245,7 @@
     s.startTs = Date.now();
     s.endTs = s.kind === 'measure' ? null : s.startTs + s.minutes * MIN;
     s.extra = 0;
+    delete s.scale;   // la scala del disco si fissa all'avvio (da s.minutes)
     P.save();
     ui.confirmExit = false;
     show();
@@ -231,7 +304,7 @@
       startTs: null, endTs: null, parkedIds: [], extra: 0
     };
     S.session = s;
-    ui = { step: null, parkOpen: false, draft: '', confirmExit: false, spanSet: false, parkMsg: '' };
+    ui = { step: null, parkOpen: false, draft: '', confirmExit: false, spanSet: false, parkMsg: '', drag: null };
     if (!isWork || o.skipReady) { begin(s); return; }
     P.save();
     show();
@@ -258,6 +331,8 @@
     const s = sess();
     if (!root || !s) return;
     root.classList.toggle('break', s.kind === 'break');
+    root.classList.toggle('disc', discOn(s));
+    ui.drag = null;
     let html = '';
     let f = 0;
     if (s.state === 'ready') html = viewReady(s);
@@ -502,6 +577,7 @@
       if (!s || s.state !== 'running' || !s.endTs) return;
       s.endTs += 5 * MIN;
       s.extra = (s.extra || 0) + 5;
+      bumpScale(s);
       P.save();
       tick();
     },
@@ -580,6 +656,7 @@
       s.startTs = now;
       s.endTs = now + 10 * MIN;
       s.extra = 0;
+      delete s.scale;
       s.endedTs = null;
       P.save();
       try { P.audioUnlock(); } catch (e) {}

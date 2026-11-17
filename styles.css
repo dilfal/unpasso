@@ -170,6 +170,43 @@ input:focus,textarea:focus,select:focus{border-color:var(--sea);outline:none;box
 .flash{animation:flash .9s ease 3}
 @keyframes flash{50%{background:var(--saffron)}}
 
+/* Timer, stile «Disco»: quadrante SVG che si restringe (disco.js). In verticale in alto, in orizzontale a sinistra. */
+#dial{display:none}
+#timer.disc #tide{display:none}
+#timer.disc[hidden]{display:none}
+#timer.disc #dial{display:grid;place-items:center;position:relative;z-index:2}
+#dial svg{display:block;width:min(86vw,58vh);height:auto;aspect-ratio:1/1;touch-action:none;max-width:100%;
+  -webkit-user-select:none;user-select:none}
+#dial svg:focus-visible{outline:3px solid var(--sea);outline-offset:3px;border-radius:30px}
+#timer.disc .tclock{font-size:clamp(3.2rem,15vw,5rem)}
+.d-frame{fill:var(--foam);stroke:var(--ink2);stroke-width:1.5}
+.d-face{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+.d-tick{stroke:var(--ink2);stroke-width:1;stroke-linecap:round}
+.d-tick.d-major{stroke:var(--ink);stroke-width:1.8}
+.d-num{fill:var(--ink);font:600 12px var(--sans);font-variant-numeric:tabular-nums}
+.d-disc{fill:var(--sea);opacity:.92}
+#timer.break .d-disc{fill:var(--saffron)}
+.d-pivot{fill:var(--ink);stroke:var(--surface);stroke-width:1.5}
+/* Verticale: quadrante, titolo, orologio e «Finisce alle» uniti e centrati; i pulsanti restano in fondo. */
+@media (orientation:portrait){
+  #timer.disc{overflow-y:auto;gap:14px;
+    padding:calc(env(safe-area-inset-top) + 14px) calc(18px + env(safe-area-inset-right)) calc(env(safe-area-inset-bottom) + 18px) calc(18px + env(safe-area-inset-left))}
+  #timer.disc .layer{display:contents}
+  #timer.disc .layer>*{order:5;margin:0 auto;width:100%;max-width:560px}
+  #timer.disc #dial{order:1;margin-top:auto;width:100%}
+  #timer.disc .layer>.ttitle{order:2}
+  #timer.disc .layer>.tclock{order:3}
+  #timer.disc .layer>[data-n="info"]{order:4;margin-bottom:auto}
+}
+@media (orientation:landscape){
+  #timer.disc{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:minmax(0,1fr)}
+  #timer.disc #dial{grid-row:1;grid-column:1;align-self:center;
+    padding:calc(env(safe-area-inset-top) + 10px) 4px calc(env(safe-area-inset-bottom) + 10px) calc(18px + env(safe-area-inset-left))}
+  #dial svg{width:min(82vh,48vw)}
+  #timer.disc .layer{grid-row:1;grid-column:2;min-height:0;padding-top:calc(env(safe-area-inset-top) + 18px)}
+  #timer.disc .tclock{margin-top:auto}
+}
+
 /* Respiro guidato */
 .breath{width:190px;height:190px;border-radius:50%;margin:18px auto;background:var(--foam);border:3px solid var(--sea);
   display:grid;place-items:center;font-family:var(--serif);font-size:1.4rem;text-align:center;transition:transform 4s ease-in-out}
